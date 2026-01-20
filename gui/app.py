@@ -17,8 +17,8 @@ from PJF.models.stock import Stock
 class GPWSimulatorApp(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Symulator GPW – Portfel")
-        self.resize(600, 600)
+        self.setWindowTitle("Symulator GPW – Portfel + SL/TP")
+        self.resize(650, 650)
 
         self.stocks = {}
         self.load_stocks()
@@ -26,7 +26,7 @@ class GPWSimulatorApp(QWidget):
         self.portfolio = Portfolio()
         self.simulator = Simulator(self.portfolio)
 
-        # TIMER: 1 minuta = 1 sesja
+        # TIMER: 10 sekund = 1 sesja
         self.timer = QTimer()
         self.timer.setInterval(10_000)
         self.timer.timeout.connect(self.auto_next_day)
@@ -37,6 +37,17 @@ class GPWSimulatorApp(QWidget):
         self.company_box.currentTextChanged.connect(self.change_stock)
 
         self.shares_input = QLineEdit()
+        self.shares_input.setPlaceholderText("Ilość akcji")
+
+        # SL / TP
+        self.sl_input = QLineEdit()
+        self.sl_input.setPlaceholderText("Stop Loss")
+
+        self.tp_input = QLineEdit()
+        self.tp_input.setPlaceholderText("Take Profit")
+
+        self.set_orders_btn = QPushButton("Ustaw SL / TP")
+        self.set_orders_btn.clicked.connect(self.set_orders)
 
         self.date_picker = QDateEdit()
         self.date_picker.setCalendarPopup(True)
@@ -53,11 +64,20 @@ class GPWSimulatorApp(QWidget):
 
         # ===== LAYOUT =====
         layout = QVBoxLayout()
+
         layout.addWidget(QLabel("Spółka:"))
         layout.addWidget(self.company_box)
 
         layout.addWidget(QLabel("Ilość akcji:"))
         layout.addWidget(self.shares_input)
+
+        layout.addWidget(QLabel("Stop Loss:"))
+        layout.addWidget(self.sl_input)
+
+        layout.addWidget(QLabel("Take Profit:"))
+        layout.addWidget(self.tp_input)
+
+        layout.addWidget(self.set_orders_btn)
 
         layout.addWidget(QLabel("Data sesji:"))
         layout.addWidget(self.date_picker)
@@ -90,14 +110,12 @@ class GPWSimulatorApp(QWidget):
         first = self.current_stock.data.iloc[0]["date"].date()
         last = self.current_stock.data.iloc[-1]["date"].date()
 
-        # jeśli symulacja jeszcze nie ruszyła → możesz ustawić dowolny start
         if self.simulator.current_date is None:
             self.date_picker.setMinimumDate(QDate(first.year, first.month, first.day))
             self.date_picker.setMaximumDate(QDate(last.year, last.month, last.day))
             self.date_picker.setDate(QDate(first.year, first.month, first.day))
             self.date_picker.setEnabled(True)
         else:
-            # po starcie symulacji: data = aktualna sesja i nie można jej zmienić
             cd = self.simulator.current_date
             qd = QDate(cd.year, cd.month, cd.day)
             self.date_picker.setMinimumDate(qd)
@@ -132,43 +150,32 @@ class GPWSimulatorApp(QWidget):
             if shares <= 0:
                 raise ValueError("Ilość musi być > 0")
 
-            # Pierwszy zakup ustala start symulacji
             if self.simulator.current_date is None:
                 qd = self.date_picker.date()
                 date = datetime(qd.year(), qd.month(), qd.day())
             else:
-                # każdy kolejny zakup = tylko bieżąca sesja
                 date = self.simulator.current_date
 
             if self.is_weekend(date):
-                QMessageBox.warning(
-                    self,
-                    "GPW zamknięta",
-                    "GPW jest zamknięta (sobota lub niedziela)."
-                )
+                QMessageBox.warning(self, "GPW zamknięta",
+                                    "GPW jest zamknięta (sobota lub niedziela).")
                 return
 
             if not self.current_stock.has_quote_on_date(date):
-                QMessageBox.warning(
-                    self,
-                    "GPW zamknięta",
-                    "GPW jest zamknięta lub brak notowań tej spółki w tej sesji."
-                )
+                QMessageBox.warning(self, "GPW zamknięta",
+                                    "Brak notowań tej spółki w tej sesji.")
                 return
 
             price = self.current_stock.get_price_on_date(date)
             self.portfolio.buy(self.current_stock, shares, price, date)
 
-            # start symulacji przy pierwszym zakupie
             if self.simulator.current_date is None:
                 self.simulator.start(date)
                 self.timer.start()
             else:
                 self.simulator.recalculate_max_date()
 
-            # po starcie blokujemy kalendarz i ustawiamy go na aktualną sesję
             self.update_date_range()
-
             self.refresh()
             self.redraw_charts()
 
@@ -188,13 +195,35 @@ class GPWSimulatorApp(QWidget):
 
     # ==========================================================
 
+    def set_orders(self):
+        try:
+            name = self.current_stock.name
+            if name not in self.portfolio.positions:
+                QMessageBox.warning(self, "Błąd", "Nie masz tej spółki w portfelu.")
+                return
+
+            sl = float(self.sl_input.text()) if self.sl_input.text() else None
+            tp = float(self.tp_input.text()) if self.tp_input.text() else None
+
+            self.portfolio.set_sl_tp(name, sl, tp)
+
+            QMessageBox.information(
+                self,
+                "Zlecenia ustawione",
+                f"Ustawiono:\nStop Loss = {sl}\nTake Profit = {tp}"
+            )
+
+        except Exception as e:
+            QMessageBox.critical(self, "Błąd", str(e))
+
+    # ==========================================================
+
     def auto_next_day(self):
         if self.simulator.current_date is None:
             return
 
         self.simulator.next_day()
 
-        # po każdej sesji kalendarz przeskakuje na aktualną datę symulacji
         cd = self.simulator.current_date
         qd = QDate(cd.year, cd.month, cd.day)
         self.date_picker.setDate(qd)
@@ -213,6 +242,8 @@ class GPWSimulatorApp(QWidget):
                 f"{name}\n"
                 f"Akcje: {pos.shares}\n"
                 f"Śr. cena: {pos.avg_price:.2f}\n"
+                f"SL: {pos.stop_loss}\n"
+                f"TP: {pos.take_profit}\n"
                 f"Obecna cena: {price:.2f}\n"
                 f"Wartość: {pos.shares * price:.2f}\n\n"
             )
