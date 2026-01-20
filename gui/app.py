@@ -1,22 +1,23 @@
 import os
 from datetime import datetime
+
+from PyQt6.QtCore import QDate, QTimer
 from PyQt6.QtWidgets import (
     QWidget, QLabel, QLineEdit, QPushButton,
     QVBoxLayout, QComboBox, QMessageBox,
     QTextEdit, QDateEdit
 )
-from PyQt6.QtCore import QDate, QTimer
 
-from PJF.models.stock import Stock
+from PJF.models.plotter import plot_portfolio, plot_stock
 from PJF.models.portfolio import Portfolio
 from PJF.models.simulator import Simulator
-from PJF.models.plotter import plot_portfolio, plot_stock
+from PJF.models.stock import Stock
 
 
 class GPWSimulatorApp(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Symulator GPW – Portfel (automatyczna symulacja)")
+        self.setWindowTitle("Symulator GPW – Portfel")
         self.resize(600, 600)
 
         self.stocks = {}
@@ -25,9 +26,9 @@ class GPWSimulatorApp(QWidget):
         self.portfolio = Portfolio()
         self.simulator = Simulator(self.portfolio)
 
-        # ===== TIMER SYMULACJI =====
+        # TIMER: 1 minuta = 1 sesja
         self.timer = QTimer()
-        self.timer.setInterval(10_000)  # 60 sekund = 1 dzień symulacji
+        self.timer.setInterval(10_000)
         self.timer.timeout.connect(self.auto_next_day)
 
         # ===== WIDGETY =====
@@ -35,7 +36,6 @@ class GPWSimulatorApp(QWidget):
         self.company_box.addItems(self.stocks.keys())
         self.company_box.currentTextChanged.connect(self.change_stock)
 
-        self.sharesshares_label = QLabel("Ilość akcji:")
         self.shares_input = QLineEdit()
 
         self.date_picker = QDateEdit()
@@ -59,7 +59,7 @@ class GPWSimulatorApp(QWidget):
         layout.addWidget(QLabel("Ilość akcji:"))
         layout.addWidget(self.shares_input)
 
-        layout.addWidget(QLabel("Data (tylko dla pierwszego zakupu):"))
+        layout.addWidget(QLabel("Data sesji:"))
         layout.addWidget(self.date_picker)
 
         layout.addWidget(self.buy_btn)
@@ -89,9 +89,21 @@ class GPWSimulatorApp(QWidget):
     def update_date_range(self):
         first = self.current_stock.data.iloc[0]["date"].date()
         last = self.current_stock.data.iloc[-1]["date"].date()
-        self.date_picker.setMinimumDate(QDate(first.year, first.month, first.day))
-        self.date_picker.setMaximumDate(QDate(last.year, last.month, last.day))
-        self.date_picker.setDate(QDate(first.year, first.month, first.day))
+
+        # jeśli symulacja jeszcze nie ruszyła → możesz ustawić dowolny start
+        if self.simulator.current_date is None:
+            self.date_picker.setMinimumDate(QDate(first.year, first.month, first.day))
+            self.date_picker.setMaximumDate(QDate(last.year, last.month, last.day))
+            self.date_picker.setDate(QDate(first.year, first.month, first.day))
+            self.date_picker.setEnabled(True)
+        else:
+            # po starcie symulacji: data = aktualna sesja i nie można jej zmienić
+            cd = self.simulator.current_date
+            qd = QDate(cd.year, cd.month, cd.day)
+            self.date_picker.setMinimumDate(qd)
+            self.date_picker.setMaximumDate(qd)
+            self.date_picker.setDate(qd)
+            self.date_picker.setEnabled(False)
 
     # ==========================================================
 
@@ -110,7 +122,6 @@ class GPWSimulatorApp(QWidget):
     # ==========================================================
 
     def is_weekend(self, date: datetime):
-        # 5 = sobota, 6 = niedziela
         return date.weekday() >= 5
 
     # ==========================================================
@@ -126,38 +137,37 @@ class GPWSimulatorApp(QWidget):
                 qd = self.date_picker.date()
                 date = datetime(qd.year(), qd.month(), qd.day())
             else:
-                # Kolejne zakupy zawsze w aktualnej dacie symulacji
+                # każdy kolejny zakup = tylko bieżąca sesja
                 date = self.simulator.current_date
 
-            # GPW zamknięta w weekend
             if self.is_weekend(date):
                 QMessageBox.warning(
                     self,
                     "GPW zamknięta",
-                    "GPW jest zamknięta (sobota lub niedziela).\nNie możesz kupić akcji tego dnia."
+                    "GPW jest zamknięta (sobota lub niedziela)."
                 )
                 return
 
-            # Brak notowań tej spółki
             if not self.current_stock.has_quote_on_date(date):
                 QMessageBox.warning(
                     self,
                     "GPW zamknięta",
-                    "GPW jest zamknięta lub brak notowań tej spółki w tym dniu.\n"
-                    "Nie możesz kupić akcji."
+                    "GPW jest zamknięta lub brak notowań tej spółki w tej sesji."
                 )
                 return
 
             price = self.current_stock.get_price_on_date(date)
             self.portfolio.buy(self.current_stock, shares, price, date)
 
-            # Start automatycznej symulacji po pierwszym zakupie
+            # start symulacji przy pierwszym zakupie
             if self.simulator.current_date is None:
                 self.simulator.start(date)
-                self.timer.start()   # ← AUTOMATYCZNA SYMULACJA STARTUJE
-
+                self.timer.start()
             else:
                 self.simulator.recalculate_max_date()
+
+            # po starcie blokujemy kalendarz i ustawiamy go na aktualną sesję
+            self.update_date_range()
 
             self.refresh()
             self.redraw_charts()
@@ -179,13 +189,16 @@ class GPWSimulatorApp(QWidget):
     # ==========================================================
 
     def auto_next_day(self):
-        """
-        Ta funkcja jest wywoływana automatycznie co minutę przez QTimer.
-        """
         if self.simulator.current_date is None:
             return
 
         self.simulator.next_day()
+
+        # po każdej sesji kalendarz przeskakuje na aktualną datę symulacji
+        cd = self.simulator.current_date
+        qd = QDate(cd.year, cd.month, cd.day)
+        self.date_picker.setDate(qd)
+
         self.refresh()
         self.redraw_charts()
 
