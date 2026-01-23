@@ -80,4 +80,3 @@ def plot_stock(position, simulator):
         ax.autoscale_view()
 
     fig.canvas.draw_idle()
-    fig.canvas.flush_events()

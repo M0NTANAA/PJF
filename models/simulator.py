@@ -29,7 +29,12 @@ class Simulator:
         if self.current_date >= self.max_date:
             return
 
-        self.current_date += timedelta(days=1)
+        next_date = self.current_date + timedelta(days=1)
+
+        while next_date.weekday() >= 5:
+            next_date += timedelta(days=1)
+
+        self.current_date = next_date
         self.update()
 
     def update(self):

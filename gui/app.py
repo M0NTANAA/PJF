@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 from datetime import datetime
 
 from PyQt6.QtCore import QDate, QTimer, Qt, QStringListModel
@@ -45,6 +46,8 @@ class GPWSimulatorApp(QWidget):
         self.company_box.blockSignals(False)
 
     def __init__(self):
+        self.last_plot_update = 0
+        self.plot_update_interwal = 0.5
         super().__init__()
         self.setWindowTitle("Symulator GPW")
         self.resize(700, 750)
@@ -207,6 +210,12 @@ class GPWSimulatorApp(QWidget):
     # ==========================================================
 
     def redraw_charts(self):
+        now = time.time()
+        if now - self.last_plot_update < self.plot_update_interwal:
+            return
+
+        self.last_plot_update = now
+
         plot_portfolio(self.portfolio, self.simulator)
 
         for name, position in self.portfolio.positions.items():
