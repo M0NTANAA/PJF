@@ -1,6 +1,8 @@
 import sys
+import faulthandler
+faulthandler.enable()
 from PyQt6.QtWidgets import QApplication
-from gui.app import GPWSimulatorApp
+from PJF.gui.app import GPWSimulatorApp
 
 def main():
     app = QApplication(sys.argv)
