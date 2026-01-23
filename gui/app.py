@@ -17,7 +17,7 @@ from PJF.models.stock import Stock
 class GPWSimulatorApp(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Symulator GPW – Portfel + SL/TP")
+        self.setWindowTitle("Symulator GPW")
         self.resize(650, 650)
 
         self.stocks = {}

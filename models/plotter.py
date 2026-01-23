@@ -20,7 +20,7 @@ def plot_portfolio(portfolio, simulator):
     plt.figure("Portfel")
     plt.clf()
     plt.plot(dates, values)
-    plt.title("Wartość portfela (symulacja)")
+    plt.title("Wartość portfela: ")
     plt.xlabel("Data")
     plt.ylabel("Wartość [zł]")
     plt.tight_layout()
