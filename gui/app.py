@@ -180,9 +180,11 @@ class GPWSimulatorApp(QWidget):
     def redraw_charts(self):
         plot_portfolio(self.portfolio, self.simulator)
 
-        name = self.current_stock.name
-        if name in self.portfolio.positions:
-            plot_stock(self.portfolio.positions[name], self.simulator)
+        for name, position in self.portfolio.positions.items():
+            plot_stock(position, self.simulator)
+        #name = self.current_stock.name
+        #if name in self.portfolio.positions:
+        #    plot_stock(self.portfolio.positions[name], self.simulator)
 
     # ==========================================================
 
