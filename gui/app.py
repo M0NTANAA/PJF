@@ -16,6 +16,34 @@ from PJF.models.stock import Stock
 
 
 class GPWSimulatorApp(QWidget):
+    def update_company_box_for_current_date(self):
+        """
+        W comboboxie pokazujemy tylko spółki, które:
+        - mają notowanie w aktualnej dacie symulacji
+        """
+        self.company_box.blockSignals(True)
+        self.company_box.clear()
+
+        # jeśli symulacja jeszcze nie ruszyła → pokazujemy wszystkie
+        if self.simulator.current_date is None:
+            companies = sorted(self.stocks.keys())
+        else:
+            date = self.simulator.current_date
+            companies = [
+                name for name, stock in self.stocks.items()
+                if stock.has_quote_on_date(date)
+            ]
+            companies.sort()
+
+        self.company_box.addItems(companies)
+
+        # ustaw aktualną spółkę sensownie
+        if companies:
+            self.company_box.setCurrentText(companies[0])
+            self.current_stock = self.stocks[companies[0]]
+
+        self.company_box.blockSignals(False)
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Symulator GPW")
@@ -127,11 +155,12 @@ class GPWSimulatorApp(QWidget):
             QMessageBox.critical(self, "Błąd", "Brak danych w folderze data/")
             sys.exit(1)
 
-        first = next(iter(self.stocks))
-        self.current_stock = self.stocks[first]
-        self.company_box.setCurrentText(first)
+        #first = next(iter(self.stocks))
+        #self.current_stock = self.stocks[first]
+        #self.company_box.setCurrentText(first)
+        #self.update_date_range()
+        self.update_company_box_for_current_date()
         self.update_date_range()
-
     # ==========================================================
 
     def load_stocks(self):
@@ -219,6 +248,7 @@ class GPWSimulatorApp(QWidget):
                 self.timer.start()
 
             self.update_date_range()
+            self.update_company_box_for_current_date()
             self.refresh()
             self.redraw_charts()
 
@@ -264,6 +294,7 @@ class GPWSimulatorApp(QWidget):
         cd = self.simulator.current_date
         self.date_picker.setDate(QDate(cd.year, cd.month, cd.day))
 
+        self.update_company_box_for_current_date()
         self.refresh()
         self.redraw_charts()
 
@@ -332,4 +363,3 @@ class GPWSimulatorApp(QWidget):
             )
 
         self.portfolio_view.setHtml(text)
-
