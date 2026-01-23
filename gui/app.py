@@ -294,6 +294,9 @@ class GPWSimulatorApp(QWidget):
             color = "#00ff00" if roi > 0 else "#ff4040" if roi < 0 else "#cccccc"
             roi_text = f'<span style="color:{color};">{roi:.2f} %</span>'
 
+            sl_text = f"{pos.stop_loss:.2f}" if pos.stop_loss is not None else "brak"
+            tp_text = f"{pos.take_profit:.2f}" if pos.take_profit is not None else "brak"
+
             text += (
                 f"<b>{name}</b><br>"
                 f"Akcje: {pos.shares}<br>"
@@ -301,6 +304,8 @@ class GPWSimulatorApp(QWidget):
                 f"Obecna cena: {price:.2f}<br>"
                 f"Wartość: {current_value:.2f}<br>"
                 f"Zainwestowano: {invested:.2f}<br>"
+                f"Stop Loss: <b>{sl_text}</b><br>"
+                f"Take Profit: <b>{tp_text}</b><br>"
                 f"Stopa zwrotu: {roi_text}<br><br>"
             )
 
