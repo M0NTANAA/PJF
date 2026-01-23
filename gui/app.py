@@ -236,21 +236,64 @@ class GPWSimulatorApp(QWidget):
     def refresh(self):
         text = ""
 
+        total_invested = 0
+        total_current_value = 0
+
         for name, pos in self.portfolio.positions.items():
             price = pos.stock.get_price_on_date(self.simulator.current_date)
+
+            invested = pos.avg_price * pos.shares
+            current_value = price * pos.shares
+
+            total_invested += invested
+            total_current_value += current_value
+
+            if invested > 0:
+                roi = ((current_value - invested) / invested) * 100
+            else:
+                roi = 0.0
+
+            # Kolor dla pojedynczej pozycji
+            if roi > 0:
+                roi_text = f'<span style="color: #00ff00;">{roi:.2f} %</span>'
+            elif roi < 0:
+                roi_text = f'<span style="color: #ff4040;">{roi:.2f} %</span>'
+            else:
+                roi_text = f'<span style="color: #cccccc;">{roi:.2f} %</span>'
+
             text += (
-                f"{name}\n"
-                f"Akcje: {pos.shares}\n"
-                f"Śr. cena: {pos.avg_price:.2f}\n"
-                f"SL: {pos.stop_loss}\n"
-                f"TP: {pos.take_profit}\n"
-                f"Obecna cena: {price:.2f}\n"
-                f"Wartość: {pos.shares * price:.2f}\n\n"
+                f"<b>{name}</b><br>"
+                f"Akcje: {pos.shares}<br>"
+                f"Śr. cena zakupu: {pos.avg_price:.2f}<br>"
+                f"SL: {pos.stop_loss}<br>"
+                f"TP: {pos.take_profit}<br>"
+                f"Obecna cena: {price:.2f}<br>"
+                f"Wartość: {current_value:.2f}<br>"
+                f"Zainwestowano: {invested:.2f}<br>"
+                f"Stopa zwrotu: {roi_text}<br><br>"
             )
 
-        if self.simulator.current_date:
-            total = self.portfolio.total_value(self.simulator.current_date)
-            text += f"Data symulacji: {self.simulator.current_date.date()}\n"
-            text += f"Wartość portfela: {total:.2f} zł"
+        # ===== STOPA ZWROTU CAŁEGO PORTFELA =====
+        if total_invested > 0:
+            portfolio_roi = ((total_current_value - total_invested) / total_invested) * 100
+        else:
+            portfolio_roi = 0.0
 
-        self.portfolio_view.setText(text)
+        if portfolio_roi > 0:
+            portfolio_roi_text = f'<span style="color: #00ff00;">{portfolio_roi:.2f} %</span>'
+        elif portfolio_roi < 0:
+            portfolio_roi_text = f'<span style="color: #ff4040;">{portfolio_roi:.2f} %</span>'
+        else:
+            portfolio_roi_text = f'<span style="color: #cccccc;">{portfolio_roi:.2f} %</span>'
+
+        if self.simulator.current_date:
+            total_value = self.portfolio.total_value(self.simulator.current_date)
+            text += (
+                f"<hr>"
+                f"Data symulacji: {self.simulator.current_date.date()}<br>"
+                f"<b>Wartość portfela: {total_value:.2f} zł</b><br>"
+                f"<b>Zainwestowano łącznie: {total_invested:.2f} zł</b><br>"
+                f"<b>Stopa zwrotu portfela: {portfolio_roi_text}</b>"
+            )
+
+        self.portfolio_view.setHtml(text)
