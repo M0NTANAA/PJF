@@ -332,6 +332,8 @@ class GPWSimulatorApp(QWidget):
     # ==========================================================
 
     def refresh(self):
+        scroll_bar = self.portfolio_view.verticalScrollBar()
+        scroll_pos = scroll_bar.value()
         text = ""
 
         total_invested = 0
@@ -389,3 +391,4 @@ class GPWSimulatorApp(QWidget):
             )
 
         self.portfolio_view.setHtml(text)
+        scroll_bar.setValue(scroll_pos)
