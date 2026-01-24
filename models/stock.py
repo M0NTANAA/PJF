@@ -24,9 +24,9 @@ class Stock:
         return target in available_dates.values
 
     def get_price_on_date(self, date: datetime) -> float:
-        """
-        Weekendy i dni bez notowań dziedziczą cenę z ostatniej sesji.
-        """
+
+        #    Weekendy i dni bez notowań dziedziczą cenę z ostatniej sesji.
+
         target = date.date()
 
         filtered = self.data[self.data["date"].dt.date <= target]

@@ -3,11 +3,11 @@ import sys
 import time
 from datetime import datetime
 
-from PyQt6.QtCore import QDate, QTimer, Qt, QStringListModel
+from PyQt6.QtCore import QDate, QTimer
 from PyQt6.QtWidgets import (
     QWidget, QLabel, QLineEdit, QPushButton,
     QVBoxLayout, QComboBox, QMessageBox,
-    QTextEdit, QDateEdit, QCompleter
+    QTextEdit, QDateEdit
 )
 
 from PJF.models.plotter import plot_portfolio, plot_stock
@@ -46,8 +46,6 @@ class GPWSimulatorApp(QWidget):
         elif companies:
             self.company_box.setCurrentText(companies[0])
             self.current_stock = self.stocks[companies[0]]
-        #else:
-        #    self.current_stock = None
 
         self.company_box.blockSignals(False)
 
@@ -175,10 +173,6 @@ class GPWSimulatorApp(QWidget):
             QMessageBox.critical(self, "Błąd", "Brak danych w folderze data/")
             sys.exit(1)
 
-        #first = next(iter(self.stocks))
-        #self.current_stock = self.stocks[first]
-        #self.company_box.setCurrentText(first)
-        #self.update_date_range()
         self.update_company_box_for_current_date()
         self.update_date_range()
     # ==========================================================
@@ -237,9 +231,6 @@ class GPWSimulatorApp(QWidget):
 
         for name, position in self.portfolio.positions.items():
             plot_stock(position, self.simulator)
-        #name = self.current_stock.name
-        #if name in self.portfolio.positions:
-        #    plot_stock(self.portfolio.positions[name], self.simulator)
 
     # ==========================================================
 

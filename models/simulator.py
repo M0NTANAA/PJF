@@ -1,4 +1,5 @@
 from datetime import timedelta
+from typing import Any
 
 
 class Simulator:
@@ -29,7 +30,7 @@ class Simulator:
         if self.current_date >= self.max_date:
             return
 
-        next_date = self.current_date + timedelta(days=1)
+        next_date: timedelta | Any = self.current_date + timedelta(days=1)
 
         while next_date.weekday() >= 5:
             next_date += timedelta(days=1)
