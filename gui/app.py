@@ -18,10 +18,9 @@ from PJF.models.stock import Stock
 
 class GPWSimulatorApp(QWidget):
     def update_company_box_for_current_date(self):
-        """
-        W comboboxie pokazujemy tylko spółki, które:
-        - mają notowanie w aktualnej dacie symulacji
-        """
+
+        if self.company_popup_open:
+            return
 
         previous = self.company_box.currentText()
 
@@ -47,14 +46,23 @@ class GPWSimulatorApp(QWidget):
         elif companies:
             self.company_box.setCurrentText(companies[0])
             self.current_stock = self.stocks[companies[0]]
-        else:
-            self.current_stock = None
+        #else:
+        #    self.current_stock = None
 
         self.company_box.blockSignals(False)
+
+    def _company_popup_show(self):
+        self.company_popup_open = True
+        QComboBox.showPopup(self.company_box)
+
+    def _company_popup_hide(self):
+        self.company_popup_open = False
+        QComboBox.hidePopup(self.company_box)
 
     def __init__(self):
         self.last_plot_update = 0
         self.plot_update_interwal = 0.5
+        self.company_popup_open = False
         super().__init__()
         self.setWindowTitle("Symulator GPW")
         self.resize(700, 750)
@@ -90,6 +98,8 @@ class GPWSimulatorApp(QWidget):
         # ===== WIDGETY =====
         self.company_box = QComboBox()
         self.company_box.setEditable(True)
+        self.company_box.showPopup = self._company_popup_show
+        self.company_box.hidePopup = self._company_popup_hide
 
 
         self.shares_input = QLineEdit()
