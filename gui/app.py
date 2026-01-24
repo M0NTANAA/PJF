@@ -22,6 +22,9 @@ class GPWSimulatorApp(QWidget):
         W comboboxie pokazujemy tylko spółki, które:
         - mają notowanie w aktualnej dacie symulacji
         """
+
+        previous = self.company_box.currentText()
+
         self.company_box.blockSignals(True)
         self.company_box.clear()
 
@@ -38,10 +41,14 @@ class GPWSimulatorApp(QWidget):
 
         self.company_box.addItems(companies)
 
-        # ustaw aktualną spółkę sensownie
-        if companies:
+        if previous in companies:
+            self.company_box.setCurrentText(previous)
+            self.current_stock = self.stocks[previous]
+        elif companies:
             self.company_box.setCurrentText(companies[0])
             self.current_stock = self.stocks[companies[0]]
+        else:
+            self.current_stock = None
 
         self.company_box.blockSignals(False)
 
